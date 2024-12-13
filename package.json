@@ -1,0 +1,41 @@
+{
+  "name": "php_application",
+  "version": "0.1.0",
+  "keywords": [
+    "aws",
+    "cdk",
+    "auto-scaling",
+    "php-application",
+    "load-balancer"
+  ],
+  "author": "Ivan I. Atanasov <i.atanasov77@gmail.com>",
+  "license": "MIT",
+  "bin": {
+    "php_application": "bin/php_application.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "cdk": "cdk"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "22.7.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "aws-cdk": "2.171.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.6.3"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.172.0",
+    "constructs": "^10.0.0",
+    
+    "@aws-sdk/client-s3": "^3.701.0",
+    "@aws-sdk/client-sns": "^3.693.0",
+    "@aws-sdk/client-dynamodb": "^3.693.0",
+        
+    "aws-cdk-helpers": "^0.5"
+  }
+}
