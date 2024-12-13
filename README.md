@@ -16,3 +16,15 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * `npx cdk diff`    compare deployed stack with current state
 * `npx cdk synth`   emits the synthesized CloudFormation template
 
+
+## Create a Loadbalanced Web Server Instances
+`
+cdk synth -c loadbalanced=true
+cdk deploy -c loadbalanced=true --profile default
+`
+
+## Create a Standalone Web Server Instance
+`
+cdk synth
+cdk deploy --profile default
+`
