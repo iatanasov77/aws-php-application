@@ -18,7 +18,8 @@ import {
     application,
     BaseFunction,
     MachineKeyPair,
-    ILoadbalancedWebServer
+    ILoadbalancedWebServer,
+    LaunchTemplateRole
 } from 'aws-cdk-helpers';
 
 export class PhpApplicationStack extends cdk.Stack
@@ -34,16 +35,17 @@ export class PhpApplicationStack extends cdk.Stack
         super( scope, id, props );
         
         const loadbalanced = scope.node.tryGetContext( 'loadbalanced' );
+        const namePrefix = 'TestPhpApplication_';
         
         // Create Key Pair
-        const keyPair: MachineKeyPair = machine.createKeyPair( this, { namePrefix: 'My' } );
+        const keyPair: MachineKeyPair = machine.createKeyPair( this, { namePrefix: namePrefix } );
         this.cfnKeyPair = keyPair.cfnKeyPair;
             
         if ( ( /true/i ).test( loadbalanced ) ) {
         
             // Create Loadbalanced Web Server EC2 instances
             this.lbws = machine.createLoadbalancedWebServerInstance( this, {
-                namePrefix: 'My',
+                namePrefix: namePrefix,
                 
                 instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
                 machineImage: new AmazonLinuxImage({
@@ -53,16 +55,27 @@ export class PhpApplicationStack extends cdk.Stack
                 keyPair: keyPair.keyPair,
                 cidr: '10.0.0.0/21',
                 
+                launchTemplateRole: LaunchTemplateRole.Ec2ManagedInstanceCoreRole,
+                //launchTemplateRole: LaunchTemplateRole.AdministratorAccessRole,
+                
+                initScripts: [
+                    { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
+                    { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
+                    { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
+                ],
+                
                 initElements: application.initSamplePhpApplication( this, {
                     sourcePath: './src/web',
-                    applicationRoot: '/usr/share/nginx/html',
+                    //applicationRoot: '/usr/share/nginx/html',
+                    applicationRoot: '/var/www/html',
                     files: [
                         'info.php',
                         'index.php'
                     ],
                     useComposer: true,
+                    
                     withEnv: true,
-                    userName: 'iatanasov',
+//                     userName: 'iatanasov',
                 }),
                 
                 desiredCapacity: 3,
@@ -78,7 +91,7 @@ export class PhpApplicationStack extends cdk.Stack
         } else {
             // Create Web Server EC2 instance
             this.webServer = machine.createStandaloneWebServerInstance( this, {
-                namePrefix: 'My',
+                namePrefix: namePrefix,
                 
                 instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
                 machineImage: new AmazonLinuxImage({
@@ -88,12 +101,6 @@ export class PhpApplicationStack extends cdk.Stack
                 keyPair: keyPair.keyPair,
                 cidr: '10.0.0.0/21',
                 
-                initScriptPath: './src/ec2Init/vankosoft.awslinux-2023.sh',
-                withInstanceInit: false,
-                lamp: {
-                    phpVersion: '8.2',
-                    databasePassword: 'PassWord4-root',
-                },
                 initElements: application.initSamplePhpApplication( this, {
                     sourcePath: './src/web',
                     
@@ -106,7 +113,7 @@ export class PhpApplicationStack extends cdk.Stack
                     ],
                     useComposer: true,
                     withEnv: true,
-                    userName: 'iatanasov',
+                    //userName: 'iatanasov',
                 })
             });
             
