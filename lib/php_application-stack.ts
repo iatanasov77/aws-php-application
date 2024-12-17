@@ -24,6 +24,8 @@ import {
 
 export class PhpApplicationStack extends cdk.Stack
 {
+    namePrefix: string;
+    
     mKeyPair: MachineKeyPair;
     
     webServer?: IInstance;
@@ -35,121 +37,119 @@ export class PhpApplicationStack extends cdk.Stack
         super( scope, id, props );
         
         const loadbalanced = scope.node.tryGetContext( 'loadbalanced' );
-        const namePrefix = 'TestPhpApplication_';
-        
+        this.namePrefix = 'TestPhpApplication_';
+         
         // Create Key Pair
-        this.mKeyPair = machine.createKeyPair( this, { namePrefix: namePrefix } );
+        this.mKeyPair = machine.createKeyPair( this, { namePrefix: this.namePrefix } );
             
         if ( ( /true/i ).test( loadbalanced ) ) {
-        
             // Create Loadbalanced Web Server EC2 instances
-            this.lbws = machine.createLoadbalancedWebServerInstance( this, {
-                namePrefix: namePrefix,
-                
-                instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
-                machineImage: new AmazonLinuxImage({
-                    generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
-                }),
-                keyPair: this.mKeyPair.keyPair,
-                
-                cidr: '10.0.0.0/21',
-                inboundPorts: [
-                    {port: 22, description: 'SSH'},
-                    {port: 80, description: 'HTTP'}
-                ],
-                
-                launchTemplateRole: LaunchTemplateRole.Ec2ManagedInstanceCoreRole,
-                //launchTemplateRole: LaunchTemplateRole.AdministratorAccessRole,
-                
-                initScripts: [
-                    { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
-                    { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
-                    { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
-                ],
-                
-                initElements: application.initSamplePhpApplication( this, {
-                    sourcePath: './src/web',
-                    //applicationRoot: '/usr/share/nginx/html',
-                    applicationRoot: '/var/www/html',
-                    
-                    files: [
-                        'info.php',
-                        'index.php'
-                    ],
-                    useComposer: true,
-                    withEnv: true,
-//                     userName: 'iatanasov',
-                }),
-                
-                desiredCapacity: 3,
-                autoScalingParams: {
-                    cpuUtilizationPercent: 60,
-                    рequestsCountPerMinute: 60,
-                }
-            });
-        
-            // Create Outputs
-            this.createLoadbalancedWebServerOutputs();
-            
+            this.createLoadbalancedWebServer();
         } else {
             // Create Web Server EC2 instance
-            this.webServer = machine.createStandaloneWebServerInstance( this, {
-                namePrefix: namePrefix,
-                
-                instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
-                machineImage: new AmazonLinuxImage({
-                    generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
-                }),
-                keyPair: this.mKeyPair.keyPair,
-                
-                cidr: '10.0.0.0/21',
-                inboundPorts: [
-                    {port: 22, description: 'SSH'},
-                    {port: 80, description: 'HTTP'},
-                    {port: '20-21', description: 'FTP'},
-                    {port: '1024-1048', description: 'FTP'}
-                ],
-                
-                initScripts: [
-                    { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
-                    { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
-                    { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
-                    { path: './src/ec2Init/ftp.sh', params: {
-                        __PASV_MIN_PORT__: '1024',
-                        __PASV_MAX_PORT__: '1048',
-                        __FTP_USER__: 'awsftpuser',
-                        __FTP_PASSWORD__: 'awsftppassord'
-                    }},   
-                ],
-                
-                initElements: application.initSamplePhpApplication( this, {
-                    sourcePath: './src/web',
-                    //applicationRoot: '/usr/share/nginx/html',
-                    applicationRoot: '/var/www/html',
-                    
-                    files: [
-                        'info.php',
-                        'index.php'
-                    ],
-                    useComposer: true,
-                    withEnv: true,
-                    //userName: 'iatanasov',
-                })
-            });
-            
-            // Create Outputs
-            this.createStandaloneWebServerOutputs();
+            this.createStandalonedWebServer();
         }
     }
     
-    private createLoadbalancedWebServer()
+    private createLoadbalancedWebServer(): void
     {
+        this.lbws = machine.createLoadbalancedWebServerInstance( this, {
+            namePrefix: this.namePrefix,
+            
+            instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
+            machineImage: new AmazonLinuxImage({
+                generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
+            }),
+            keyPair: this.mKeyPair.keyPair,
+            
+            cidr: '10.0.0.0/21',
+            inboundPorts: [
+                {port: 22, description: 'SSH'},
+                {port: 80, description: 'HTTP'}
+            ],
+            
+            launchTemplateRole: LaunchTemplateRole.Ec2ManagedInstanceCoreRole,
+            //launchTemplateRole: LaunchTemplateRole.AdministratorAccessRole,
+            
+            initScripts: [
+                { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
+                { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
+                { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
+            ],
+            
+            initElements: application.initSamplePhpApplication( this, {
+                sourcePath: './src/web',
+                //applicationRoot: '/usr/share/nginx/html',
+                applicationRoot: '/var/www/html',
+                
+                files: [
+                    'info.php',
+                    'index.php'
+                ],
+                useComposer: true,
+                withEnv: true,
+//                     userName: 'iatanasov',
+            }),
+            
+            desiredCapacity: 3,
+            autoScalingParams: {
+                cpuUtilizationPercent: 60,
+                рequestsCountPerMinute: 60,
+            }
+        });
     
+        // Create Outputs
+        this.createLoadbalancedWebServerOutputs();
     }
     
-    private createStandalonedWebServer()
+    private createStandalonedWebServer(): void
     {
-    
+        this.webServer = machine.createStandaloneWebServerInstance( this, {
+            namePrefix: this.namePrefix,
+            
+            instanceType: InstanceType.of( InstanceClass.T2, InstanceSize.MICRO ),
+            machineImage: new AmazonLinuxImage({
+                generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
+            }),
+            keyPair: this.mKeyPair.keyPair,
+            
+            cidr: '10.0.0.0/21',
+            inboundPorts: [
+                {port: 22, description: 'SSH'},
+                {port: 80, description: 'HTTP'},
+                {port: '20-21', description: 'FTP'},
+                {port: '1024-1048', description: 'FTP'}
+            ],
+            
+            initScripts: [
+                { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
+                { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
+                { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
+                { path: './src/ec2Init/ftp.sh', params: {
+                    __PASV_MIN_PORT__: '1024',
+                    __PASV_MAX_PORT__: '1048',
+                    __FTP_USER__: 'awsftpuser',
+                    __FTP_PASSWORD__: 'awsftppassord'
+                }},   
+            ],
+            
+            initElements: application.initSamplePhpApplication( this, {
+                sourcePath: './src/web',
+                //applicationRoot: '/usr/share/nginx/html',
+                applicationRoot: '/var/www/html',
+                
+                files: [
+                    'info.php',
+                    'index.php'
+                ],
+                useComposer: true,
+                withEnv: true,
+                //userName: 'iatanasov',
+            })
+        });
+        
+        // Create Outputs
+        this.createStandaloneWebServerOutputs();
     }
     
     private createOutputs()
