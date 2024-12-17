@@ -24,7 +24,7 @@ import {
 
 export class PhpApplicationStack extends cdk.Stack
 {
-    cfnKeyPair: CfnKeyPair;
+    mKeyPair: MachineKeyPair;
     
     webServer?: IInstance;
     
@@ -38,8 +38,7 @@ export class PhpApplicationStack extends cdk.Stack
         const namePrefix = 'TestPhpApplication_';
         
         // Create Key Pair
-        const keyPair: MachineKeyPair = machine.createKeyPair( this, { namePrefix: namePrefix } );
-        this.cfnKeyPair = keyPair.cfnKeyPair;
+        this.mKeyPair = machine.createKeyPair( this, { namePrefix: namePrefix } );
             
         if ( ( /true/i ).test( loadbalanced ) ) {
         
@@ -51,9 +50,13 @@ export class PhpApplicationStack extends cdk.Stack
                 machineImage: new AmazonLinuxImage({
                     generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
                 }),
+                keyPair: this.mKeyPair.keyPair,
                 
-                keyPair: keyPair.keyPair,
                 cidr: '10.0.0.0/21',
+                inboundPorts: [
+                    {port: 22, description: 'SSH'},
+                    {port: 80, description: 'HTTP'}
+                ],
                 
                 launchTemplateRole: LaunchTemplateRole.Ec2ManagedInstanceCoreRole,
                 //launchTemplateRole: LaunchTemplateRole.AdministratorAccessRole,
@@ -68,12 +71,12 @@ export class PhpApplicationStack extends cdk.Stack
                     sourcePath: './src/web',
                     //applicationRoot: '/usr/share/nginx/html',
                     applicationRoot: '/var/www/html',
+                    
                     files: [
                         'info.php',
                         'index.php'
                     ],
                     useComposer: true,
-                    
                     withEnv: true,
 //                     userName: 'iatanasov',
                 }),
@@ -97,15 +100,32 @@ export class PhpApplicationStack extends cdk.Stack
                 machineImage: new AmazonLinuxImage({
                     generation: AmazonLinuxGeneration.AMAZON_LINUX_2023,
                 }),
+                keyPair: this.mKeyPair.keyPair,
                 
-                keyPair: keyPair.keyPair,
                 cidr: '10.0.0.0/21',
+                inboundPorts: [
+                    {port: 22, description: 'SSH'},
+                    {port: 80, description: 'HTTP'},
+                    {port: '20-21', description: 'FTP'},
+                    {port: '1024-1048', description: 'FTP'}
+                ],
+                
+                initScripts: [
+                    { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
+                    { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
+                    { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
+                    { path: './src/ec2Init/ftp.sh', params: {
+                        __PASV_MIN_PORT__: '1024',
+                        __PASV_MAX_PORT__: '1048',
+                        __FTP_USER__: 'awsftpuser',
+                        __FTP_PASSWORD__: 'awsftppassord'
+                    }},   
+                ],
                 
                 initElements: application.initSamplePhpApplication( this, {
                     sourcePath: './src/web',
-                    
-                    applicationRoot: '/var/www/html',
                     //applicationRoot: '/usr/share/nginx/html',
+                    applicationRoot: '/var/www/html',
                     
                     files: [
                         'info.php',
@@ -122,12 +142,22 @@ export class PhpApplicationStack extends cdk.Stack
         }
     }
     
+    private createLoadbalancedWebServer()
+    {
+    
+    }
+    
+    private createStandalonedWebServer()
+    {
+    
+    }
+    
     private createOutputs()
     {
         // Download Private Key from KeyPair assigned to the EC2 instance
         new cdk.CfnOutput( this, 'DownloadKeyCommand', {
             value: `
-aws ssm get-parameter --name /ec2/keypair/${this.cfnKeyPair.attrKeyPairId} \\
+aws ssm get-parameter --name /ec2/keypair/${this.mKeyPair.cfnKeyPair.attrKeyPairId} \\
 --with-decryption --query Parameter.Value \\
 --output text --profile default > ~/cdk-key.pem && chmod 0600 ~/cdk-key.pem
 `
