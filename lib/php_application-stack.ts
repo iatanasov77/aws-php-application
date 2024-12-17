@@ -22,6 +22,8 @@ import {
     LaunchTemplateRole
 } from 'aws-cdk-helpers';
 
+require( 'dotenv-flow' ).config();
+
 export class PhpApplicationStack extends cdk.Stack
 {
     namePrefix: string;
@@ -122,21 +124,21 @@ export class PhpApplicationStack extends cdk.Stack
             ],
             
             initScripts: [
-                { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: '8.2'} },
-                { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: 'aws'} },
-                { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: '/var/www/html'} },
+                { path: './src/ec2Init/webserver.sh', params: {__PHP_VERSION__: process.env.PHP_VERSION as string} },
+                { path: './src/ec2Init/mysql.sh', params: {__DATABASE_ROOT_PASSWORD__: process.env.DATABASE_ROOT_PASSWORD as string} },
+                { path: './src/ec2Init/phpmyadmin.sh', params: {__PHPMYADMIN_BASE_PATH__: process.env.PHPMYADMIN_BASE_PATH as string} },
                 { path: './src/ec2Init/ftp.sh', params: {
                     __PASV_MIN_PORT__: '1024',
                     __PASV_MAX_PORT__: '1048',
-                    __FTP_USER__: 'awsftpuser',
-                    __FTP_PASSWORD__: 'awsftppassord'
+                    __FTP_USER__: process.env.FTP_USER as string,
+                    __FTP_PASSWORD__: process.env.FTP_PASSWORD as string
                 }},   
             ],
             
             initElements: application.initSamplePhpApplication( this, {
                 sourcePath: './src/web',
                 //applicationRoot: '/usr/share/nginx/html',
-                applicationRoot: '/var/www/html',
+                applicationRoot: process.env.APPLICATION_ROOT_PATH as string,
                 
                 files: [
                     'info.php',
