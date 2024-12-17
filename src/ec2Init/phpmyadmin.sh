@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /var/www/html
+cd __PHPMYADMIN_BASE_PATH__
 wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.tar.gz
 
 mkdir phpMyAdmin && tar -xvzf phpMyAdmin-latest-all-languages.tar.gz -C phpMyAdmin --strip-components 1
